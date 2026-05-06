@@ -4,6 +4,9 @@ use bevy::{
 };
 use rand::prelude::*;
 
+mod ui;
+use ui::*;
+
 const TIME_STEP: f32 = 1.0 / 60.0;
 const BOUNDS: Vec2 = Vec2::new(1200.0, 640.0);
 const BOID_COUNT: usize = 400;
@@ -13,7 +16,7 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_systems(Update, close_when_requested)
-        .add_systems(Startup, setup)
+        .add_systems(Startup, (setup, setup_ui))
         .add_systems(Update, text_toggle)
         .add_systems(Update, (text_update_system, input_system))
         .add_systems(FixedUpdate, boid_movement_system)
@@ -31,7 +34,7 @@ fn main() {
 }
 
 #[derive(Resource)]
-struct SimParams {
+pub struct SimParams {
     perception_radius: f32,
     separation_radius: f32,
     movement_speed: f32,
@@ -49,10 +52,6 @@ struct Boid {
     // rotation speed in radians per second
     rotation_speed: f32,
 }
-
-// UI elements
-#[derive(Component)]
-struct ParamDisplay;
 
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>, params: Res<SimParams>) {
     let boid_handle = asset_server.load("boid.png");
@@ -83,60 +82,8 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>, params: Res<Sim
             }
         ));
     }
-
-    commands.spawn((
-        Text::new(""),
-        Node {
-            position_type: PositionType::Absolute,
-            top: Val::Px(10.0),
-            left: Val::Px(10.0),
-            ..default()
-        },
-        TextFont {
-            font_size: 10.0,
-            ..default()
-        },
-        Visibility::Visible,
-        ParamDisplay,
-    ));
 }
 
-fn text_toggle(
-    mut visibility: Query<&mut Visibility, With<ParamDisplay>>,
-    input: Res<ButtonInput<KeyCode>>,
-) {
-    if input.just_pressed(KeyCode::Tab) {
-        if let Ok(mut visible) = visibility.single_mut() {
-            *visible = match *visible {
-                Visibility::Visible => Visibility::Hidden,
-                _ => Visibility::Visible,
-            }
-        }
-    }
-}
-
-fn text_update_system(
-    mut query: Query<&mut Text, With<ParamDisplay>>,
-    params: Res<SimParams>,
-) {
-    let perception_radius = params.perception_radius;
-    let separation_radius = params.separation_radius;
-    let align_weight = params.align_weight;
-    let cohere_weight = params.cohere_weight;
-    let avoid_weight = params.avoid_weight;
-    let border_weight = params.border_weight;
-
-    if let Ok(mut text) = query.single_mut() {
-        **text = format!("
-        Perception: {perception_radius:.2}
-        Separation: {separation_radius:.2}
-        Alignment:  {align_weight:.2}
-        Cohesion:   {cohere_weight:.2}
-        Avoidance:  {avoid_weight:.2}
-        Border:     {border_weight:.2}
-        ");
-    }
-}
 
 fn input_system(
     input: Res<ButtonInput<KeyCode>>,
