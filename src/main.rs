@@ -33,6 +33,7 @@ fn main() {
             align_weight: 1.0,
             cohere_weight: 1.0,
             avoid_weight: 1.0,
+            fov: std::f32::consts::TAU * 0.75,
         })
         .run();
 }
@@ -46,6 +47,7 @@ pub struct SimParams {
     align_weight: f32,
     cohere_weight: f32,
     avoid_weight: f32,
+    fov: f32,
 }
 
 #[derive(Component)]
@@ -83,7 +85,6 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>, params: Res<Sim
         ));
     }
 }
-
 
 fn input_system(
     input: Res<ButtonInput<KeyCode>>,
@@ -199,12 +200,19 @@ fn collect_snapshot(query: &Query<(Entity, &Boid, &mut Transform)>) -> Vec<(Enti
 fn find_neighbors(
     entity: Entity,
     position: Vec3,
+    heading: Quat,
     snapshot: &[(Entity, Vec3, Quat)],
-    perception_radius: f32
+    perception_radius: f32,
+    fov: f32,
  ) -> Vec<(Entity, Vec3, Quat)> {
     let mut neighbors = Vec::new();
+    let fov_half_cos = (fov / 2.0).cos();
+
+    let forward = heading.normalize() * Vec3::Y;
 
     for (other_entity, other_position, other_rotation) in snapshot {
+
+        // Skip a boid's self when comparing
         if other_entity == &entity {
             continue;
         }
@@ -212,7 +220,10 @@ fn find_neighbors(
         let distance = other_position.distance(position);
 
         if distance < perception_radius {
-            neighbors.push((*other_entity, *other_position, *other_rotation));
+           let to_other = (other_position - position).normalize();
+            if forward.dot(to_other) > fov_half_cos {
+                neighbors.push((*other_entity, *other_position, *other_rotation));
+            }
         }
     }
 
@@ -270,7 +281,7 @@ fn boid_movement_system(mut query: Query<(Entity, &Boid, &mut Transform)>, param
     let snapshot = collect_snapshot(&query);
 
     for (entity, boid, mut transform) in query.iter_mut() {
-        let neighbors = find_neighbors(entity, transform.translation, &snapshot, params.perception_radius);
+        let neighbors = find_neighbors(entity, transform.translation, transform.rotation, &snapshot, params.perception_radius, params.fov);
         let mut align_force: f32 = 0.;
         let mut cohere_force: f32 = 0.;
         let mut avoid_force: f32 = 0.;
