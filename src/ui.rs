@@ -18,7 +18,7 @@ pub fn setup_ui(mut commands: Commands) {
             font_size: 10.0,
             ..default()
         },
-        Visibility::Visible,
+        Visibility::Hidden,
         ParamDisplay,
     ));
 }
@@ -46,7 +46,6 @@ pub fn text_update_system(
     let align_weight = params.align_weight;
     let cohere_weight = params.cohere_weight;
     let avoid_weight = params.avoid_weight;
-    let border_weight = params.border_weight;
 
     if let Ok(mut text) = query.single_mut() {
         **text = format!("
@@ -55,7 +54,6 @@ pub fn text_update_system(
         Alignment:  {align_weight:.2}
         Cohesion:   {cohere_weight:.2}
         Avoidance:  {avoid_weight:.2}
-        Border:     {border_weight:.2}
         ");
     }
 }
