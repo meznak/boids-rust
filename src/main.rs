@@ -14,6 +14,7 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_systems(Update, close_when_requested)
         .add_systems(Startup, setup)
+        .add_systems(Update, text_toggle)
         .add_systems(Update, (text_update_system, input_system))
         .add_systems(FixedUpdate, boid_movement_system)
         .insert_resource(SimParams {
@@ -98,6 +99,20 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>, params: Res<Sim
         Visibility::Visible,
         ParamDisplay,
     ));
+}
+
+fn text_toggle(
+    mut visibility: Query<&mut Visibility, With<ParamDisplay>>,
+    input: Res<ButtonInput<KeyCode>>,
+) {
+    if input.just_pressed(KeyCode::Tab) {
+        if let Ok(mut visible) = visibility.single_mut() {
+            *visible = match *visible {
+                Visibility::Visible => Visibility::Hidden,
+                _ => Visibility::Visible,
+            }
+        }
+    }
 }
 
 fn text_update_system(
