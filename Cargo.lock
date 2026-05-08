@@ -1752,7 +1752,7 @@ dependencies = [
 
 [[package]]
 name = "boids-rust"
-version = "1.0.3"
+version = "1.0.4"
 dependencies = [
  "bevy",
  "bytes",
