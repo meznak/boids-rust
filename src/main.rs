@@ -27,7 +27,7 @@ fn main() {
         .add_systems(FixedUpdate, boid_movement_system)
         .insert_resource(SimParams {
             perception_radius: 75.0,
-            separation_radius: 25.0,
+            separation_radius: 20.0,
             movement_speed: 50.0,
             rotation_speed: f32::to_radians(135.0),
             align_weight: 1.0,
@@ -210,6 +210,8 @@ fn find_neighbors(
     perception_radius: f32,
     fov: f32,
  ) -> Vec<(Entity, Vec3, Quat)> {
+    // Search the 3x3 grid around a boid, returning neighbors
+
     let mut neighbors = Vec::new();
     let fov_half_cos = (fov / 2.0).cos();
 
@@ -244,13 +246,15 @@ fn find_neighbors(
 }
 
 fn calc_row_col(position: Vec3, cell_size: f32, cols: usize, rows: usize) -> (usize, usize) {
-        let shifted_x = position.x + BOUNDS.x / 2.0;
-        let col = ((shifted_x / cell_size) as usize).min(cols - 1);
+    // Determine grid position of a given boid
 
-        let shifted_y = position.y + BOUNDS.y / 2.0;
-        let row = ((shifted_y / cell_size) as usize).min(rows - 1);
+    let shifted_x = position.x + BOUNDS.x / 2.0;
+    let col = ((shifted_x / cell_size) as usize).min(cols - 1);
 
-        (col, row)
+    let shifted_y = position.y + BOUNDS.y / 2.0;
+    let row = ((shifted_y / cell_size) as usize).min(rows - 1);
+
+    (col, row)
 }
 
 fn steer_alignment(current_rotation: Quat, neighbors: &[(Entity, Vec3, Quat)]) -> f32 {
