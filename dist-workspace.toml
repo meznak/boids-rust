@@ -14,3 +14,4 @@ targets = ["aarch64-apple-darwin", "aarch64-unknown-linux-gnu", "x86_64-apple-da
 
 [dist.dependencies.apt]
 libwayland-dev = { version = "*", targets = ["x86_64-unknown-linux-gnu"] }
+libwayland-client = { version = "*", targets = ["x86_64-unknown-linux-gnu"] }
