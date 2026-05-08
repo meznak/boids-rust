@@ -202,6 +202,11 @@ fn find_neighbors(
     position: Vec3,
     heading: Quat,
     snapshot: &[(Entity, Vec3, Quat)],
+    grid: &Vec<Vec<usize>>,
+    cols: usize,
+    rows: usize,
+    col: usize,
+    row: usize,
     perception_radius: f32,
     fov: f32,
  ) -> Vec<(Entity, Vec3, Quat)> {
@@ -210,24 +215,42 @@ fn find_neighbors(
 
     let forward = heading.normalize() * Vec3::Y;
 
-    for (other_entity, other_position, other_rotation) in snapshot {
+    for dc in [-1, 0, 1] {
+        let neighbor_col = (col as i32 + dc).rem_euclid(cols as i32) as usize;
+        for dr in [-1, 0, 1] {
+            let neighbor_row = (row as i32 + dr).rem_euclid(rows as i32) as usize;
 
-        // Skip a boid's self when comparing
-        if other_entity == &entity {
-            continue;
-        }
+            for &idx in &grid[neighbor_row * cols + neighbor_col] {
+                let (other_entity, other_position, other_rotation) = snapshot[idx];
 
-        let distance = other_position.distance(position);
+                // Skip a boid's self when comparing
+                if other_entity == entity {
+                    continue;
+                }
 
-        if distance < perception_radius {
-           let to_other = (other_position - position).normalize();
-            if forward.dot(to_other) > fov_half_cos {
-                neighbors.push((*other_entity, *other_position, *other_rotation));
+                let distance = other_position.distance(position);
+
+                if distance < perception_radius {
+                let to_other = (other_position - position).normalize();
+                    if forward.dot(to_other) > fov_half_cos {
+                        neighbors.push((other_entity, other_position, other_rotation));
+                    }
+                }
             }
         }
     }
 
     neighbors
+}
+
+fn calc_row_col(position: Vec3, cell_size: f32, cols: usize, rows: usize) -> (usize, usize) {
+        let shifted_x = position.x + BOUNDS.x / 2.0;
+        let col = ((shifted_x / cell_size) as usize).min(cols - 1);
+
+        let shifted_y = position.y + BOUNDS.y / 2.0;
+        let row = ((shifted_y / cell_size) as usize).min(rows - 1);
+
+        (col, row)
 }
 
 fn steer_alignment(current_rotation: Quat, neighbors: &[(Entity, Vec3, Quat)]) -> f32 {
@@ -280,8 +303,23 @@ fn steer_avoidance(current_rotation: Quat, current_position: Vec3, neighbors: &[
 fn boid_movement_system(mut query: Query<(Entity, &Boid, &mut Transform)>, params: Res<SimParams>) {
     let snapshot = collect_snapshot(&query);
 
+    // Build search grid
+    let cell_size = params.perception_radius;
+    let cols = (BOUNDS.x / cell_size).ceil() as usize;
+    let rows = (BOUNDS.y / cell_size).ceil() as usize;
+
+    let mut grid: Vec<Vec<usize>> = vec![vec![]; cols * rows];
+    for (i, boid) in snapshot.iter().enumerate() {
+        let (col, row) = calc_row_col(boid.1, cell_size, cols, rows);
+
+        grid[row * cols + col].push(i);
+    }
+
+    // Build forces
     for (entity, boid, mut transform) in query.iter_mut() {
-        let neighbors = find_neighbors(entity, transform.translation, transform.rotation, &snapshot, params.perception_radius, params.fov);
+        let (col, row) = calc_row_col(transform.translation, cell_size, cols, rows);
+
+        let neighbors = find_neighbors(entity, transform.translation, transform.rotation, &snapshot, &grid, cols, rows, col, row, params.perception_radius, params.fov);
         let mut align_force: f32 = 0.;
         let mut cohere_force: f32 = 0.;
         let mut avoid_force: f32 = 0.;
