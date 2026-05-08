@@ -1,6 +1,6 @@
 [package]
 name = "boids-rust"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2024"
 description = "A Boids flocking simulation"
 license = "MIT"
@@ -9,8 +9,12 @@ repository = "https://github.com/meznak/boids-rust"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bevy = { version = "0.18.1" }
+bevy = "0.18.1"
+bytes = "1.11.1"
 rand = "0.10.1"
+
+[dev-dependencies]
+bytes = "1.11.1"
 
 [features]
 dev = ["bevy/dynamic_linking"]
